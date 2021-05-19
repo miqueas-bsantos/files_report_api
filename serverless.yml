@@ -1,0 +1,60 @@
+service: concil-acquirers-download-reports
+org: miqueassantos
+
+custom:
+  stage: ${opt:stage, self:provider.stage}
+  region: ${opt:region, self:provider.region}
+  pythonRequirements:
+    dockerizePip: "non-linux"
+    # slim: true
+  alerts:
+    stages:
+      - dev
+
+provider:
+  name: aws
+  runtime: python3.8
+  stage: dev
+  stackTags:
+    Owner: Concil
+  region: us-east-1
+  logRetentionInDays: 7
+  logs:
+    restApi: true
+  tracing:
+    apiGateway: true
+    lambda: true
+  environment:
+    LOG_LEVEL: INFO # Log level global para ser usado pelo logger aws-lambda-powertools
+    HOST: "concil${opt:stage, self:provider.stage}"
+    DATABASE: "concil${opt:stage, self:provider.stage}"
+    USER: ""
+    PASSWORD: ""
+    PORT: "5432"
+
+functions:
+  acquirersReports: ${file(functions/acquirer-reports.yml)}
+  # acquirersReport:
+  #   handler: api/handler.acquirers_downloads_reports
+  #   memorySize: 128
+  #   description: Return all acquirers availables in Concil System
+  #   events:
+  #     - http: 
+  #         path: acquirers/reports/download
+  #         method: get
+
+package:
+  individually: true
+  exclude:
+    - test/**
+    - node_modules/**
+    - buildspec.yml
+    - functions/**
+    - README.md/
+    - env/**
+
+plugins:
+  - serverless-iam-roles-per-function # Plugin de criacao de role e policy para cada lambda
+  - serverless-plugin-aws-alerts # Plugin de criacao de alarmes para as metricas do Lambda
+  - serverless-pseudo-parameters # Plugin para uso da funcao !Sub do Cloudformation
+  - serverless-python-requirements # Plugin para controle dos modulos python no requirements.txt
